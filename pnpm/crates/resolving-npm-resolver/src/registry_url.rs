@@ -27,6 +27,13 @@ pub fn to_registry_url(registry: &str, pkg_name: &str) -> String {
     format!("{registry}{encoded}")
 }
 
+/// Re-serialize a URL from registry metadata in its WHATWG canonical form,
+/// which drops a redundant default port (`:443` for `https`, `:80` for
+/// `http`). A string that does not parse as a URL is returned unchanged.
+pub(crate) fn normalize_registry_url(url: &str) -> String {
+    reqwest::Url::parse(url).map_or_else(|_error| url.to_string(), String::from)
+}
+
 /// `encodeURIComponent` clone for the characters npm package names
 /// can carry. For a scoped name the leading `@` is preserved and
 /// the rest of the name is percent-encoded.

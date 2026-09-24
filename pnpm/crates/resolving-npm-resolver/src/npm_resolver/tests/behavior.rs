@@ -367,6 +367,48 @@ async fn unparsable_shasum_fails_the_resolve() {
 }
 
 #[tokio::test]
+async fn default_port_is_stripped_from_the_tarball_url() {
+    for (served, expected) in [
+        (
+            "http://registry.npmjs.org:80/acme/-/acme-1.0.0.tgz",
+            "http://registry.npmjs.org/acme/-/acme-1.0.0.tgz",
+        ),
+        (
+            "https://registry.npmjs.org:443/acme/-/acme-1.0.0.tgz",
+            "https://registry.npmjs.org/acme/-/acme-1.0.0.tgz",
+        ),
+    ] {
+        let mut server = mockito::Server::new_async().await;
+        let mut body: serde_json::Value = serde_json::from_str(PACKAGE_BODY).unwrap();
+        body["versions"]["1.0.0"]["dist"]["tarball"] = json!(served);
+        server
+            .mock("GET", "/acme")
+            .with_status(200)
+            .with_body(body.to_string())
+            .create_async()
+            .await;
+        let registry = format!("{}/", server.url());
+        let (resolver, _tempdir) = build_resolver(&registry);
+        let wanted = WantedDependency {
+            alias: Some("acme".to_string()),
+            bare_specifier: Some("1.0.0".to_string()),
+            ..WantedDependency::default()
+        };
+
+        let result = resolver
+            .resolve(&wanted, &ResolveOptions::default())
+            .await
+            .unwrap()
+            .unwrap();
+
+        let LockfileResolution::Tarball(resolution) = &result.resolution else {
+            panic!("expected tarball resolution, got {:?}", result.resolution);
+        };
+        assert_eq!(resolution.tarball, expected);
+    }
+}
+
+#[tokio::test]
 async fn peek_manifest_from_store_bypasses_network_when_package_in_store() {
     let server = mockito::Server::new_async().await;
     let registry = format!("{}/", server.url());

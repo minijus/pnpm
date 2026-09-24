@@ -4,6 +4,7 @@ use super::{
     TARBALL_URL_MISMATCH_VIOLATION_CODE, TarballRevision,
     is_integrity_addressed_registry_tarball_url,
 };
+use crate::registry_url::normalize_registry_url;
 
 pub(super) fn same_tarball_url(left: &str, right: &str) -> bool {
     canonical_tarball_url(left) == canonical_tarball_url(right)
@@ -160,8 +161,7 @@ pub(super) fn lockfile_revision(resolution: &LockfileResolution) -> Option<u64> 
 /// encoding difference between the lockfile URL and the registry
 /// metadata isn't read as tampering.
 pub(super) fn canonical_tarball_url(url: &str) -> String {
-    let normalized = reqwest::Url::parse(url)
-        .map_or_else(|_error| url.to_string(), |parsed| parsed.to_string())
+    let normalized = normalize_registry_url(url)
         // `%2f` may survive re-serialization in either case; normalize both.
         .replace("%2F", "/")
         .replace("%2f", "/");

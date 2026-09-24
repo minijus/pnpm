@@ -10,8 +10,9 @@ use super::{
     },
     select_package_revision, tarball_revision,
 };
-use crate::pick_package_from_meta::{
-    RegistryPackageSpecType, semver_range::semver_satisfies_loose,
+use crate::{
+    pick_package_from_meta::{RegistryPackageSpecType, semver_range::semver_satisfies_loose},
+    registry_url::normalize_registry_url,
 };
 use pnpm_resolving_resolver_base::NonDeprecatedAlternative;
 
@@ -350,7 +351,7 @@ pub(super) fn picked_tarball_resolution(
     let integrity = dist_integrity(&picked.dist)?;
     let revision = tarball_revision(picked, integrity.as_ref(), registry)?;
     let resolution = LockfileResolution::Tarball(TarballResolution {
-        tarball: picked.dist.tarball.clone(),
+        tarball: normalize_registry_url(&picked.dist.tarball),
         integrity,
         revision,
         git_hosted: None,
